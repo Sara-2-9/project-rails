@@ -1,0 +1,20 @@
+<div class="flex flex-col">
+  <%= form_with local: true do |form| %>
+    <div class="form-group flex flex-col">
+      <%= form.label :query, class: "text-sm font-bold mb-2 text-blue-500" %>
+      <%= form.text_area :query, class: "rounded-md h-40" %>
+      <%= form.submit 'Get content', class: "text-sm font-bold mt-2 p-4 border w-1/4 rounded-md bg-green-500" %>
+    </div>
+  <% end %>
+</div>
+
+<div class="mt-20">
+  <div class="row">
+    <h2 class="text-sm font-bold mb-2 text-blue-500">Context:</h2>
+    <p>I am the only child. My father named his son John.</p>
+    <h2 class="text-sm font-bold mb-2 mt-6 text-blue-500">Result:</h2>
+    <% flash.each do |key, value| %>
+      <p><%= value %></p>
+    <% end %>
+  </div>
+</div>

@@ -67,3 +67,6 @@ group :test do
 end
 
 gem "tailwindcss-rails", "~> 2.6"
+
+# gem of hugging-face [https://github.com/alchaplinsky/hugging-face/tree/main]
+gem "hugging-face", "~> 0.3.5"
