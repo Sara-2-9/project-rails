@@ -9,9 +9,18 @@
 
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+
+    <%= favicon_link_tag asset_path('favicon.ico') %>
   </head>
 
   <body>
+    <header>
+      <div>
+        <a href=<%= root_path %>>
+          <%= image_tag "Q-A-Chat-icon.png", class: "w-32 h-12 mt-4 ml-4" %>
+        </a>
+      </div>
+    </header>
     <main class="container mx-auto mt-10 px-5 flex flex-col">
       <%= yield %>
     </main>
