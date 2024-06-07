@@ -9,8 +9,11 @@ class HuggingfaceController < ApplicationController
 
   def create
     query = params[:query]
-    service = HuggingfaceService.new(query)
-    Rails.logger.info "-> Content: #{params}"
+    context = params[:context]
+    service = HuggingfaceService.new(query, context)
+    Rails.logger.info "-> Params received: query: #{query}, context: #{context}"
+
+    service = HuggingfaceService.new(query, context)
 
     begin
       @result = service.call
