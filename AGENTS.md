@@ -24,7 +24,7 @@ This is a **Ruby on Rails 7.1** web application named `ProjectRails`. It impleme
 | CSS | Tailwind CSS via `tailwindcss-rails` (~> 2.6) |
 | JavaScript | ESM import maps (`importmap-rails`), no Node.js bundler |
 | Frontend interactivity | Hotwire (Turbo + Stimulus) |
-| External AI API | Hugging Face (`hugging-face` gem ~> 0.3.5) |
+| External AI API | Hugging Face Inference API (via `Net::HTTP`) |
 | Asset pipeline | Sprockets (`sprockets-rails`) |
 | Image processing | `libvips` (commented out / available via `image_processing`) |
 | Testing | Rails built-in Minitest, Capybara, Selenium WebDriver |
@@ -43,7 +43,7 @@ app/
   models/
     application_record.rb       # No domain models currently defined
   services/
-    huggingface_service.rb      # Wraps HuggingFace::InferenceApi calls
+    huggingface_service.rb      # Direct HTTP calls to Hugging Face Inference API
   views/
     home/index.html.erb
     huggingface/index.html.erb
@@ -80,9 +80,10 @@ test/
 
 `HuggingfaceService` lives in `app/services/` and is not a model. It:
 1. Accepts `query` (question) and `context` strings.
-2. Instantiates `HuggingFace::InferenceApi` with the encrypted API token.
-3. Calls `client.question_answering(...)` and returns the `answer` string.
-4. Logs initialization, client creation, responses, and errors via `Rails.logger`.
+2. Reads the API token from `ENV["HUGGINGFACE_API_KEY"]` (preferred) or falls back to `Rails.application.credentials.huggingface_api_key`.
+3. Makes a direct `Net::HTTP` POST to `https://router.huggingface.co/hf-inference/models/{model}`.
+4. Parses the JSON response and extracts the `answer` field.
+5. Logs initialization, requests, raw responses, and errors via `Rails.logger`.
 
 ---
 
@@ -137,9 +138,12 @@ rails test:system
 - Tests run in parallel by default using `parallelize(workers: :number_of_processors)`.
 - Fixtures are loaded from `test/fixtures/*.yml` automatically (`fixtures :all`).
 - There are currently no fixture files other than the empty `files/` directory.
+- `config/environments/test.rb` has `config.require_master_key = false` so tests can run without the master key.
 
 ### Existing tests
-- `test/controllers/home_controller_test.rb` — asserts that `GET home_index_url` returns a success response.
+- `test/controllers/home_controller_test.rb` — asserts that `GET root_url` returns a success response.
+- `test/controllers/huggingface_controller_test.rb` — tests index, create redirect, and error handling.
+- `test/services/huggingface_service_test.rb` — tests missing API key, response parsing, and edge cases.
 
 ---
 
@@ -156,11 +160,7 @@ rails test:system
 
 ## Security Considerations
 
-- **Encrypted credentials:** The Hugging Face API key is stored in `config/credentials.yml.enc` under the key `huggingface_api_key`. It is accessed as:
-  ```ruby
-  Rails.application.credentials.huggingface_api_key
-  ```
-  The `config/master.key` file is **gitignored** and must never be committed.
+- **API key configuration:** The Hugging Face API key is read from `ENV["HUGGINGFACE_API_KEY"]` (preferred for Render/Heroku-style deploys). It can also fall back to `Rails.application.credentials.huggingface_api_key` if the env var is not set. The `config/master.key` file is **gitignored** and must never be committed.
 - **CSRF protection:** Enabled by default (`ApplicationController < ActionController::Base`).
 - **Force SSL:** Enabled in production (`config.force_ssl = true`).
 - **CSP:** A content security policy initializer exists (`config/initializers/content_security_policy.rb`) but is currently not configured/enforced.
@@ -176,7 +176,8 @@ rails test:system
 - Runtime: Ruby (free plan)
 - Build command: `./bin/render-build.sh` *(this script does **not** currently exist in the repo)*
 - Start command: `bundle exec rails server`
-- Required env vars: `DATABASE_URL`, `RAILS_MASTER_KEY`, `WEB_CONCURRENCY`
+- Required env vars: `DATABASE_URL`, `HUGGINGFACE_API_KEY`, `WEB_CONCURRENCY`
+- Optional env var: `RAILS_MASTER_KEY` (only needed if you store the API key in Rails credentials instead of `HUGGINGFACE_API_KEY`)
 
 ### Docker (production-ready)
 The `Dockerfile` builds a production image in three stages:
@@ -199,7 +200,7 @@ The `Dockerfile` builds a production image in three stages:
 
 ## External Dependencies & API
 
-- **Hugging Face Inference API:** The app calls `question_answering` using the `alchaplinsky/hugging-face` Ruby gem.
+- **Hugging Face Inference API:** The app calls the `question_answering` endpoint directly via `Net::HTTP`. The old `alchaplinsky/hugging-face` gem was removed because it used the deprecated `api-inference.huggingface.co` endpoint.
 - **Redis:** Configured for Action Cable in production (`config/cable.yml`), but the `redis` gem is not included in the `Gemfile` (commented out). If Action Cable is enabled later, uncomment the gem and ensure `REDIS_URL` is set.
 
 ---
