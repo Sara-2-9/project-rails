@@ -8,8 +8,15 @@ class HuggingfaceController < ApplicationController
   end
 
   def create
-    query = params[:query]
-    context = params[:context]
+    query = params[:query].to_s.strip
+    context = params[:context].to_s.strip
+
+    if query.blank? || context.blank?
+      flash[:result] = "Error: Question and Context are required."
+      redirect_to huggingface_index_path
+      return
+    end
+
     service = HuggingfaceService.new(query, context)
     Rails.logger.info "-> Params received: query: #{query}, context: #{context}"
 

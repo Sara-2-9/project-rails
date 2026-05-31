@@ -4,7 +4,7 @@ require "uri"
 
 class HuggingfaceService
   HOST = "https://router.huggingface.co"
-  MODEL = "distilbert-base-cased-distilled-squad"
+  MODEL = "deepset/roberta-base-squad2"
 
   def initialize(query, context)
     @query = query
@@ -24,11 +24,11 @@ class HuggingfaceService
     request = Net::HTTP::Post.new(uri)
     request["Authorization"] = "Bearer #{api_key}"
     request["Content-Type"] = "application/json"
-    request.body = { question: @query, context: @context }.to_json
+    request.body = { inputs: { question: @query, context: @context } }.to_json
 
     Rails.logger.info "-> Sending request to #{uri}"
 
-    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, read_timeout: 30, open_timeout: 10) do |http|
       http.request(request)
     end
 
